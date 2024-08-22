@@ -2,13 +2,11 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"math"
 	"math/rand/v2"
 	"time"
 )
-
-const PLAYER_UPDATE_PER_SECOND = 1
-const PLAYER_UPDATE_DISTANCE = 1024
 
 func makePlayer(account *Account) *Player {
 	pl := new(Player)
@@ -17,6 +15,14 @@ func makePlayer(account *Account) *Player {
 	pl.position.X = rand.Int() % 1024
 	pl.position.Y = rand.Int() % 1024
 	return pl
+}
+
+func getPointDistance(a image.Point, b image.Point) float64 {
+	dX := float64(a.X - b.X)
+	dY := float64(a.Y - b.Y)
+	dX *= dX
+	dY *= dY
+	return math.Sqrt(dX + dY)
 }
 
 func playerUpdateView(client *Client, force bool) {
@@ -33,17 +39,7 @@ func playerUpdateView(client *Client, force bool) {
 			continue
 		}
 		other := cl.account.player.position
-		dX := pos.X - other.X
-		dX *= dX
-		if dX > PLAYER_UPDATE_DISTANCE {
-			continue
-		}
-		dY := pos.Y - other.Y
-		dY *= dY
-		if dY > PLAYER_UPDATE_DISTANCE {
-			continue
-		}
-		distance := math.Sqrt(float64(dX + dY))
+		distance := getPointDistance(pos, other)
 		if distance > PLAYER_UPDATE_DISTANCE {
 			continue
 		}

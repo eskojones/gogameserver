@@ -12,14 +12,6 @@ import (
 	"time"
 )
 
-const NET_TIMEOUT = 60       // seconds
-const NET_READ_DEADLINE = 50 // milliseconds
-const NET_MSG_MAX_LEN = 1024 // bytes
-
-var accounts = make(map[string]*Account)
-var clients = make(map[string]*Client)
-var messages []*ClientMessage
-
 func broadcastBytes(msg []byte) {
 	for _, v := range clients {
 		_, _ = v.connection.Write(msg)
@@ -28,19 +20,6 @@ func broadcastBytes(msg []byte) {
 
 func broadcastString(msg string) {
 	broadcastBytes([]byte(msg))
-}
-
-func makeClient(conn net.Conn) *Client {
-	client := new(Client)
-	client.connection = conn
-	client.history = make([]*ClientMessage, 0)
-	client.lastRead = time.Now()
-	clients[conn.RemoteAddr().String()] = client
-	return client
-}
-
-func deleteClient(client *Client) {
-	delete(clients, client.connection.RemoteAddr().String())
 }
 
 func connectionHandler(conn net.Conn) {
@@ -63,7 +42,7 @@ func connectionHandler(conn net.Conn) {
 			}
 		}
 
-		clientSendUpdate(client)
+		clientUpdate(client)
 
 		if count == 0 {
 			if time.Now().Sub(client.lastRead) > NET_TIMEOUT*time.Second {

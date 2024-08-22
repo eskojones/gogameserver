@@ -1,18 +1,17 @@
 package main
 
-import "fmt"
-
-const CLIENT_FN_CREATE = "create"
-const CLIENT_FN_LOGIN = "login"
-const CLIENT_FN_LOGOUT = "logout"
-
-var clientFunctions map[string]func(*Client, []string) bool
+import (
+	"fmt"
+	"image"
+	"strconv"
+)
 
 func loadClientFunctions() {
 	clientFunctions = make(map[string]func(*Client, []string) bool)
 	clientFunctions[CLIENT_FN_CREATE] = fnAccountCreate
 	clientFunctions[CLIENT_FN_LOGIN] = fnAccountLogin
 	clientFunctions[CLIENT_FN_LOGOUT] = fnAccountLogout
+	clientFunctions[CLIENT_FN_UPDATE] = fnPlayerUpdate
 }
 
 // handles client account-create command
@@ -72,5 +71,28 @@ func fnAccountLogout(client *Client, args []string) bool {
 	fmt.Printf("[account logout success (%s)]\n", client.account.username)
 	client.account = nil
 	clientSend(client, []byte(fmt.Sprintf("%s true", CLIENT_FN_LOGOUT)))
+	return true
+}
+
+func fnPlayerUpdate(client *Client, args []string) bool {
+	if len(args) != 3 || client.account == nil {
+		fmt.Printf("[player update failed]\n")
+		return false
+	}
+	newPosition := image.Point{}
+	x, errX := strconv.Atoi(args[1])
+	y, errY := strconv.Atoi(args[2])
+	if errX != nil || errY != nil {
+		fmt.Printf("[player update invalid]\n")
+		return false
+	}
+	newPosition.X = x
+	newPosition.Y = y
+	if getPointDistance(client.account.player.position, newPosition) > 1 {
+		fmt.Printf("[player update invalid]\n")
+		return false
+	}
+	client.account.player.position.X = newPosition.X
+	client.account.player.position.Y = newPosition.Y
 	return true
 }

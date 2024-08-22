@@ -3,12 +3,23 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"time"
 )
 
-const CLIENT_MSG_HISTORY_LEN = 50
-const CLIENT_MSG_QUEUE_LEN = 500
+func makeClient(conn net.Conn) *Client {
+	client := new(Client)
+	client.connection = conn
+	client.history = make([]*ClientMessage, 0)
+	client.lastRead = time.Now()
+	clients[conn.RemoteAddr().String()] = client
+	return client
+}
+
+func deleteClient(client *Client) {
+	delete(clients, client.connection.RemoteAddr().String())
+}
 
 func clientSend(client *Client, message []byte) bool {
 	if client.connection == nil {
@@ -23,7 +34,7 @@ func clientSend(client *Client, message []byte) bool {
 	return true
 }
 
-func clientSendUpdate(client *Client) {
+func clientUpdate(client *Client) {
 	if client.account == nil || client.connection == nil {
 		return
 	}
