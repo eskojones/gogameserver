@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+const CLIENT_MSG_HISTORY_LEN = 50
+const CLIENT_MSG_QUEUE_LEN = 500
+
 func clientSend(client *Client, message []byte) bool {
 	if client.connection == nil {
 		return false
@@ -26,10 +29,17 @@ func clientSendUpdate(client *Client) {
 	}
 
 	// send position update to client
-	clientSend(client, []byte("update"))
+	if time.Now().Sub(client.account.player.lastUpdate).Seconds() > 1000/PLAYER_UPDATES_PER_SECOND*time.Millisecond.Seconds() {
+		for _, cl := range clients {
+			if cl.account == nil || cl.connection == nil {
+				continue
+			}
+			clientSend(client, []byte(fmt.Sprintf("update %d %d", cl.account.player.position.X, cl.account.player.position.Y)))
+		}
+	}
 }
 
-func clientMessageHandler(client *Client, msgBuffer []byte, msgLength int) {
+func makeClientMessage(client *Client, msgBuffer []byte, msgLength int) *ClientMessage {
 	msg := new(ClientMessage)
 	msg.sender = client
 	msg.message = msgBuffer
@@ -37,16 +47,20 @@ func clientMessageHandler(client *Client, msgBuffer []byte, msgLength int) {
 	msg.timestamp = time.Now()
 
 	client.history = append(client.history, msg)
-	if len(client.history) > 64 {
+	if len(client.history) > CLIENT_MSG_HISTORY_LEN {
 		client.history = client.history[1:]
 	}
 
 	messages = append(messages, msg)
-	if len(messages) > 256 {
+	if len(messages) > CLIENT_MSG_QUEUE_LEN {
 		messages = messages[1:]
 	}
 	fmt.Printf("<%s> %s", client.connection.RemoteAddr().String(), string(msg.message))
+	return msg
+}
 
+func clientMessageHandler(client *Client, msgBuffer []byte, msgLength int) {
+	msg := makeClientMessage(client, msgBuffer, msgLength)
 	words := strings.Split(strings.ToLower(string(msg.message)), " ")
 	if len(words) == 0 {
 		return
@@ -56,12 +70,15 @@ func clientMessageHandler(client *Client, msgBuffer []byte, msgLength int) {
 			words[i] = strings.ReplaceAll(words[i], "\n", "")
 		}
 	}
-
 	fn := clientFunctions[words[0]]
 	if fn == nil {
-		fmt.Printf("%s sent an invalid message (%s)!\n", msg.sender.connection.RemoteAddr().String(), words[0])
-		clientSend(msg.sender, []byte("invalid message"))
+		onClientInvalidMessage(client, words)
 		return
 	}
 	fn(msg.sender, words)
+}
+
+func onClientInvalidMessage(client *Client, args []string) {
+	fmt.Printf("%s sent an invalid message (%s)!\n", client.connection.RemoteAddr().String(), args[0])
+	clientSend(client, []byte("invalid message"))
 }

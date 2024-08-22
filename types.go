@@ -16,8 +16,8 @@ type ClientMessage struct {
 type Client struct {
 	connection net.Conn
 	history    []*ClientMessage
-	lastRead   time.Time
 	account    *Account
+	lastRead   time.Time
 }
 
 type Account struct {
@@ -28,6 +28,7 @@ type Account struct {
 }
 
 type Player struct {
-	account  *Account
-	position image.Point
+	account    *Account
+	position   image.Point
+	lastUpdate time.Time
 }

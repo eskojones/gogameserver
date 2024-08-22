@@ -27,6 +27,7 @@ func fnAccountCreate(client *Client, args []string) bool {
 	account.password = password
 	accounts[username] = account
 	clientSend(client, []byte("create true"))
+	account.player = makePlayer(account)
 	return true
 }
 

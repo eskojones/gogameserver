@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+const NET_TIMEOUT = 60       // seconds
+const NET_READ_DEADLINE = 50 // milliseconds
+const NET_MSG_MAX_LEN = 1024 // bytes
+
 var accounts = make(map[string]*Account)
 var clients = make(map[string]*Client)
 var messages []*ClientMessage
@@ -26,22 +30,29 @@ func broadcastString(msg string) {
 	broadcastBytes([]byte(msg))
 }
 
-func connectionHandler(conn net.Conn) {
-	addr := conn.RemoteAddr().String()
-	fmt.Printf("[%s connected]\n", addr)
-	broadcastString(fmt.Sprintf("[%s connected]\r\n", addr))
+func makeClient(conn net.Conn) *Client {
 	client := new(Client)
 	client.connection = conn
 	client.history = make([]*ClientMessage, 0)
 	client.lastRead = time.Now()
-	clients[addr] = client
+	clients[conn.RemoteAddr().String()] = client
+	return client
+}
 
+func deleteClient(client *Client) {
+	delete(clients, client.connection.RemoteAddr().String())
+}
+
+func connectionHandler(conn net.Conn) {
+	addr := conn.RemoteAddr().String()
+	fmt.Printf("[%s connected]\n", addr)
+	client := makeClient(conn)
 	defer conn.Close()
-	readBuf := make([]byte, 1024)
-	messageBuf := make([]byte, 1024)
+	readBuf := make([]byte, NET_MSG_MAX_LEN)
+	messageBuf := make([]byte, NET_MSG_MAX_LEN)
 	var bytesReadCount int
 	for {
-		_ = conn.SetReadDeadline(time.Now().Add((1000.0 / 20.0) * time.Millisecond))
+		_ = conn.SetReadDeadline(time.Now().Add(NET_READ_DEADLINE * time.Millisecond))
 		count, err := conn.Read(readBuf)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -55,7 +66,7 @@ func connectionHandler(conn net.Conn) {
 		clientSendUpdate(client)
 
 		if count == 0 {
-			if time.Now().Sub(client.lastRead) > 60*time.Second {
+			if time.Now().Sub(client.lastRead) > NET_TIMEOUT*time.Second {
 				fmt.Printf("[%s timed out]\n", addr)
 				break
 			}
@@ -65,7 +76,7 @@ func connectionHandler(conn net.Conn) {
 		messageBuf = fmt.Appendf(messageBuf[:bytesReadCount], "%s", readBuf[:count])
 		bytesReadCount += count
 
-		if bytesReadCount > 1024 {
+		if bytesReadCount > NET_MSG_MAX_LEN {
 			fmt.Printf("[%s sent an invalid message (too long)]\n", addr)
 			break
 		}
@@ -80,7 +91,7 @@ func connectionHandler(conn net.Conn) {
 	}
 	fmt.Printf("[%s disconnected]\n", addr)
 	broadcastString(fmt.Sprintf("[%s disconnected]\r\n", addr))
-	delete(clients, addr)
+	deleteClient(client)
 }
 
 func listen(port int, handler func(net.Conn)) error {
