@@ -8,6 +8,9 @@ import (
 )
 
 func clientSend(client *Client, message []byte) bool {
+	if client.connection == nil {
+		return false
+	}
 	message = append(message, '\n')
 	_, err := client.connection.Write(message)
 	if err != nil {
@@ -18,7 +21,7 @@ func clientSend(client *Client, message []byte) bool {
 }
 
 func clientSendUpdate(client *Client) {
-	if client.account == nil {
+	if client.account == nil || client.connection == nil {
 		return
 	}
 
@@ -37,6 +40,7 @@ func clientMessageHandler(client *Client, msgBuffer []byte, msgLength int) {
 	if len(client.history) > 64 {
 		client.history = client.history[1:]
 	}
+
 	messages = append(messages, msg)
 	if len(messages) > 256 {
 		messages = messages[1:]
@@ -51,9 +55,7 @@ func clientMessageHandler(client *Client, msgBuffer []byte, msgLength int) {
 		for strings.Contains(words[i], "\n") {
 			words[i] = strings.ReplaceAll(words[i], "\n", "")
 		}
-		// fmt.Printf("\"%s\"(%d) ", words[i], len(words[i]))
 	}
-	// fmt.Printf("\n")
 
 	fn := clientFunctions[words[0]]
 	if fn == nil {

@@ -11,7 +11,7 @@ func loadClientFunctions() {
 
 // handles client account-create command
 func fnAccountCreate(client *Client, args []string) bool {
-	if len(args) != 3 {
+	if len(args) != 3 || client.account != nil {
 		clientSend(client, []byte("create false"))
 		return false
 	}

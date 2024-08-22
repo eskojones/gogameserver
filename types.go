@@ -31,5 +31,3 @@ type Player struct {
 	account  *Account
 	position image.Point
 }
-
-type ClientMessageHandler func(*Client, []byte, int)
