@@ -15,12 +15,13 @@ import (
 type ClientMessage struct {
 	sender    Client
 	message   []byte
+	length    int
 	timestamp time.Time
 }
 
 type Client struct {
 	connection net.Conn
-	history    []ClientMessage
+	history    []*ClientMessage
 	lastRead   time.Time
 }
 
@@ -32,7 +33,7 @@ type Account struct {
 
 var accounts = make(map[string]*Account)
 var clients = make(map[string]Client)
-var messages []ClientMessage
+var messages []*ClientMessage
 
 func broadcastBytes(msg []byte) {
 	for _, v := range clients {
@@ -66,20 +67,25 @@ func clientSend(client Client, message []byte) bool {
 	return true
 }
 
-func messageHandler(msg ClientMessage) bool {
+func messageHandler(msg *ClientMessage) bool {
 	words := strings.Split(strings.ToLower(string(msg.message)), " ")
 	if len(words) == 0 {
 		return false
 	}
+	for i := range words {
+		words[i] = strings.ReplaceAll(words[i], "\r", "")
+		fmt.Printf("\"%s\" ", words[i])
+	}
+	fmt.Printf("\n")
 	command := words[0]
 	switch command {
 	case "create":
 		// account create
 		ret := accountCreate(words[1], words[2])
 		if ret == false {
-			clientSend(msg.sender, []byte("false"))
+			clientSend(msg.sender, []byte("false\n"))
 		} else {
-			clientSend(msg.sender, []byte("true"))
+			clientSend(msg.sender, []byte("true\n"))
 		}
 	case "auth":
 		// account auth
@@ -99,7 +105,7 @@ func connHandler(conn net.Conn) {
 	broadcastString(fmt.Sprintf("[%s connected]\r\n", addr))
 	client := Client{
 		connection: conn,
-		history:    make([]ClientMessage, 0),
+		history:    make([]*ClientMessage, 0),
 		lastRead:   time.Now(),
 	}
 	clients[addr] = client
@@ -107,7 +113,7 @@ func connHandler(conn net.Conn) {
 	defer conn.Close()
 	readBuf := make([]byte, 1024)
 	messageBuf := make([]byte, 1024)
-
+	var bytesReadCount int
 	for {
 		count, err := conn.Read(readBuf)
 		if err != nil {
@@ -125,18 +131,22 @@ func connHandler(conn net.Conn) {
 			continue
 		}
 
-		if len(messageBuf)+len(readBuf) > 1024 {
-			fmt.Printf("[%s sent an invalid message]\n", addr)
+		bytesReadCount += count
+
+		if bytesReadCount > 1024 {
+			fmt.Printf("[%s sent an invalid message (too long)]\n", addr)
 			break
 		}
+
 		messageBuf = fmt.Appendf(messageBuf, "%s", readBuf)
 		if strings.Contains(string(readBuf), "\n") {
 			client.lastRead = time.Now()
-			clientMessage := ClientMessage{
-				sender:    client,
-				message:   messageBuf,
-				timestamp: time.Now(),
-			}
+			clientMessage := new(ClientMessage)
+			clientMessage.sender = client
+			clientMessage.message = messageBuf[:]
+			clientMessage.length = bytesReadCount
+			clientMessage.timestamp = time.Now()
+
 			client.history = append(client.history, clientMessage)
 			if len(client.history) > 64 {
 				client.history = client.history[1:]
@@ -145,11 +155,11 @@ func connHandler(conn net.Conn) {
 			if len(messages) > 256 {
 				messages = messages[1:]
 			}
-			tmp := string(messageBuf)
-			fmt.Printf("<%s> %s", addr, tmp)
+			fmt.Printf("<%s> %s", addr, string(clientMessage.message))
 			// broadcastString(fmt.Sprintf("<%s> %s", addr, tmp))
-			clear(messageBuf)
 			messageHandler(clientMessage)
+			clear(messageBuf)
+			bytesReadCount = 0
 		}
 		clear(readBuf)
 	}
