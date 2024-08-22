@@ -28,15 +28,7 @@ func clientSendUpdate(client *Client) {
 		return
 	}
 
-	// send position update to client
-	if time.Now().Sub(client.account.player.lastUpdate).Seconds() > 1000/PLAYER_UPDATES_PER_SECOND*time.Millisecond.Seconds() {
-		for _, cl := range clients {
-			if cl.account == nil || cl.connection == nil {
-				continue
-			}
-			clientSend(client, []byte(fmt.Sprintf("update %d %d", cl.account.player.position.X, cl.account.player.position.Y)))
-		}
-	}
+	playerUpdateView(client, false)
 }
 
 func makeClientMessage(client *Client, msgBuffer []byte, msgLength int) *ClientMessage {
