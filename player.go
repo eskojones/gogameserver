@@ -8,7 +8,7 @@ import (
 )
 
 const PLAYER_UPDATE_PER_SECOND = 1
-const PLAYER_UPDATE_DISTANCE = 10
+const PLAYER_UPDATE_DISTANCE = 1024
 
 func makePlayer(account *Account) *Player {
 	pl := new(Player)
@@ -39,10 +39,10 @@ func playerUpdateView(client *Client, force bool) {
 			continue
 		}
 		dY := pos.Y - other.Y
+		dY *= dY
 		if dY > PLAYER_UPDATE_DISTANCE {
 			continue
 		}
-		dY *= dY
 		distance := math.Sqrt(float64(dX + dY))
 		if distance > PLAYER_UPDATE_DISTANCE {
 			continue
