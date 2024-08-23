@@ -58,20 +58,20 @@ func makeClientMessage(client *Client, msgBuffer []byte, msgLength int) *ClientM
 	if len(messages) > CLIENT_MSG_QUEUE_LEN {
 		messages = messages[1:]
 	}
-	fmt.Printf("<%s> %s", client.connection.RemoteAddr().String(), string(msg.message))
+	fmt.Printf("<%s> %s\n", client.connection.RemoteAddr().String(), string(msg.message))
 	return msg
 }
 
 func clientMessageHandler(client *Client, msgBuffer []byte, msgLength int) {
-	msg := makeClientMessage(client, msgBuffer, msgLength)
+	actualMsgBuffer := msgBuffer[:msgLength]
+	actualMsgLength := len(string(actualMsgBuffer))
+	if actualMsgLength == 0 {
+		return
+	}
+	msg := makeClientMessage(client, actualMsgBuffer, msgLength)
 	words := strings.Split(strings.ToLower(string(msg.message)), " ")
 	if len(words) == 0 {
 		return
-	}
-	for i := range words {
-		for strings.Contains(words[i], "\n") {
-			words[i] = strings.ReplaceAll(words[i], "\n", "")
-		}
 	}
 	fn := clientFunctions[words[0]]
 	if fn == nil {

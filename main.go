@@ -54,6 +54,7 @@ func connectionHandler(conn net.Conn) {
 
 		messageBuf = fmt.Appendf(messageBuf[:bytesReadCount], "%s", readBuf[:count])
 		bytesReadCount += count
+		client.lastRead = time.Now()
 
 		if bytesReadCount > NET_MSG_MAX_LEN {
 			fmt.Printf("[%s sent an invalid message (too long)]\n", addr)
@@ -61,8 +62,10 @@ func connectionHandler(conn net.Conn) {
 		}
 
 		if strings.Contains(string(readBuf), "\n") {
-			client.lastRead = time.Now()
-			clientMessageHandler(client, messageBuf[:], bytesReadCount)
+			messages := strings.Split(string(messageBuf), "\n")
+			for _, msg := range messages {
+				clientMessageHandler(client, []byte(fmt.Sprintf("%s\n", msg)), len(msg))
+			}
 			clear(messageBuf)
 			bytesReadCount = 0
 		}
