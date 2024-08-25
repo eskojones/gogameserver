@@ -31,6 +31,7 @@ func clientSend(client *Client, message []byte) bool {
 		log.Println(err)
 		return false
 	}
+	fmt.Printf("send: %s", message)
 	return true
 }
 

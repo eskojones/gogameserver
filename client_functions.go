@@ -11,6 +11,7 @@ func loadClientFunctions() {
 	clientFunctions[CLIENT_FN_LOGIN] = fnAccountLogin
 	clientFunctions[CLIENT_FN_LOGOUT] = fnAccountLogout
 	clientFunctions[CLIENT_FN_UPDATE] = fnPlayerUpdate
+	clientFunctions[CLIENT_FN_QUERY] = fnPlayerQuery
 }
 
 // handles client account-create command
@@ -87,11 +88,29 @@ func fnPlayerUpdate(client *Client, args []string) bool {
 	}
 	newPosition.X = x
 	newPosition.Y = y
-	// if getPointDistance(client.account.player.position, newPosition) > 10 {
+	// if getPointDistance(client.account.player.position, newPosition) > 100 {
 	// 	fmt.Printf("[player update invalid]\n")
 	// 	return false
 	// }
 	client.account.player.position.X = newPosition.X
 	client.account.player.position.Y = newPosition.Y
+	return true
+}
+
+func fnPlayerQuery(client *Client, args []string) bool {
+	if len(args) != 2 || client.account == nil {
+		fmt.Printf("[player query failed]\n")
+		return false
+	}
+	acc := accounts[args[1]]
+	if acc == nil {
+		return false
+	}
+	pl := acc.player
+	spriteStr := ""
+	for _, p := range pl.sprite {
+		spriteStr += fmt.Sprintf("%d,%d ", p.X, p.Y)
+	}
+	clientSend(client, []byte(fmt.Sprintf("%s %s %s", CLIENT_FN_QUERY, args[1], spriteStr)))
 	return true
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"math"
 	"math/rand/v2"
 	"time"
@@ -13,6 +14,12 @@ func makePlayer(account *Account) *Player {
 	pl.lastUpdate = time.Now()
 	pl.position.X = float64(rand.Int() % 1024)
 	pl.position.Y = float64(rand.Int() % 1024)
+	pl.sprite = make([]image.Point, 0)
+	for i := 0; i < 3; i++ {
+		rx := rand.Int() % 10
+		ry := rand.Int() % 10
+		pl.sprite = append(pl.sprite, image.Point{X: rx, Y: ry})
+	}
 	return pl
 }
 
