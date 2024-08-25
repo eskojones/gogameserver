@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"strconv"
 )
 
@@ -79,19 +78,19 @@ func fnPlayerUpdate(client *Client, args []string) bool {
 		fmt.Printf("[player update failed]\n")
 		return false
 	}
-	newPosition := image.Point{}
-	x, errX := strconv.Atoi(args[1])
-	y, errY := strconv.Atoi(args[2])
+	newPosition := Point{}
+	x, errX := strconv.ParseFloat(args[1], 64)
+	y, errY := strconv.ParseFloat(args[2], 64)
 	if errX != nil || errY != nil {
-		fmt.Printf("[player update invalid]\n")
+		fmt.Printf("[player update invalid (%.4f %.4f)]\n", x, y)
 		return false
 	}
 	newPosition.X = x
 	newPosition.Y = y
-	if getPointDistance(client.account.player.position, newPosition) > 1 {
-		fmt.Printf("[player update invalid]\n")
-		return false
-	}
+	// if getPointDistance(client.account.player.position, newPosition) > 10 {
+	// 	fmt.Printf("[player update invalid]\n")
+	// 	return false
+	// }
 	client.account.player.position.X = newPosition.X
 	client.account.player.position.Y = newPosition.Y
 	return true

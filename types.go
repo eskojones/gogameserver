@@ -1,7 +1,6 @@
 package main
 
 import (
-	"image"
 	"net"
 	"time"
 )
@@ -29,8 +28,13 @@ type Account struct {
 
 type Player struct {
 	account    *Account
-	position   image.Point
+	position   Point
 	lastUpdate time.Time
+}
+
+type Point struct {
+	X float64
+	Y float64
 }
 
 const NET_TIMEOUT = 60       // time in seconds a client may go without sending a message
@@ -45,7 +49,7 @@ const CLIENT_FN_UPDATE = "update" // command to update a player's position
 const CLIENT_MSG_HISTORY_LEN = 50 // keep this many of the client's messages
 const CLIENT_MSG_QUEUE_LEN = 500  // keep this many client messages in the global history
 
-const PLAYER_UPDATE_PER_SECOND = 1  // player view updates per second
+const PLAYER_UPDATE_PER_SECOND = 10 // player view updates per second
 const PLAYER_UPDATE_DISTANCE = 1024 // distance a player is updated of another player
 
 var accounts = make(map[string]*Account)                    // map of username -> Account
